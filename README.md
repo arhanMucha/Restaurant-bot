@@ -16,3 +16,4 @@ This is a simple static demo designed to be easy to upload from a phone.
 ## Deploy on Vercel
 Upload this project to GitHub, then import it into Vercel.
 Because it is static, Vercel can deploy it without build settings or environment variables.
+test
