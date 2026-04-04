@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Restaurant Bot</title>
+  <style>
+    :root{
+      --bg:#0f172a;--card:#111827;--muted:#94a3b8;--text:#e5e7eb;--accent:#60a5fa;--accent2:#22c55e;--border:#1f2937;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,Arial,sans-serif;background:linear-gradient(180deg,#020617,#0f172a 35%,#111827);color:var(--text)}
+    .wrap{max-width:1080px;margin:0 auto;padding:24px}
+    .top{display:grid;grid-template-columns:1.1fr .9fr;gap:18px;margin-bottom:18px}
+    .card{background:rgba(17,24,39,.92);border:1px solid var(--border);border-radius:24px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+    .hero{padding:28px}
+    h1{margin:0 0 10px;font-size:42px}
+    p{line-height:1.55}
+    .muted{color:var(--muted)}
+    .pill{display:inline-block;padding:8px 12px;border:1px solid var(--border);border-radius:999px;background:#0b1220;font-size:13px;color:#cbd5e1}
+    .stats{padding:20px;display:grid;gap:12px}
+    .stat{padding:16px;border:1px solid var(--border);border-radius:18px;background:#0b1220}
+    .grid{display:grid;grid-template-columns:1fr 340px;gap:18px}
+    .chat{min-height:650px;display:flex;flex-direction:column}
+    .chat-head{padding:18px;border-bottom:1px solid var(--border)}
+    .chat-head h2{margin:0 0 6px}
+    .messages{padding:18px;display:flex;flex-direction:column;gap:12px;flex:1;overflow:auto}
+    .msg{max-width:80%;padding:12px 14px;border-radius:18px;white-space:pre-wrap;line-height:1.45}
+    .user{align-self:flex-end;background:#60a5fa;color:#08111f;font-weight:700}
+    .bot{align-self:flex-start;background:#0b1220;border:1px solid var(--border)}
+    .composer{display:flex;gap:10px;padding:14px;border-top:1px solid var(--border)}
+    input{flex:1;padding:14px;border-radius:14px;border:1px solid var(--border);background:#020617;color:var(--text);outline:none}
+    button{padding:14px 16px;border:none;border-radius:14px;cursor:pointer;font-weight:700}
+    #send{background:#60a5fa;color:#08111f}
+    .secondary{background:#1f2937;color:#e5e7eb}
+    .side{padding:18px}
+    .info{display:grid;gap:10px}
+    .row{padding:12px 14px;border:1px solid var(--border);border-radius:16px;background:#0b1220}
+    .label{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px}
+    .quick{display:grid;gap:10px;margin-top:14px}
+    .status{margin-top:14px;padding:12px 14px;border-radius:16px;background:#0b1220;border:1px solid var(--border);font-size:14px}
+    .ok{color:#86efac}
+    .warn{color:#fcd34d}
+    @media(max-width:900px){.top,.grid{grid-template-columns:1fr}.chat{min-height:560px}}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="card hero">
+      <div class="pill">Real AI version</div>
+      <h1 id="biz-name">Restaurant Bot</h1>
+      <p class="muted">This version is built for Vercel and uses a backend API route. It can answer questions and handle a reservation conversation. Anthropic works after you add your API key in Vercel.</p>
+      <p><strong id="biz-hours">Hours loading...</strong><br><span id="biz-address" class="muted">Address loading...</span><br><span id="biz-phone" class="muted">Phone loading...</span></p>
+    </div>
+    <div class="card stats">
+      <div class="stat"><strong>What this does</strong><br><span class="muted">Real backend API call to Anthropic through Vercel serverless functions.</span></div>
+      <div class="stat"><strong>What you add later</strong><br><span class="muted">Google Calendar connection and website widget embed.</span></div>
+      <div class="stat"><strong>Status</strong><br><span id="calendar-status" class="muted">Checking calendar status...</span></div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card chat">
+      <div class="chat-head">
+        <h2 id="chat-title">Assistant</h2>
+        <div class="muted">Try: I want to book a table for 2 on Saturday at 19:00</div>
+      </div>
+      <div class="messages" id="messages"></div>
+      <div class="composer">
+        <input id="input" placeholder="Type your message..." />
+        <button id="send">Send</button>
+      </div>
+    </div>
+
+    <div class="card side">
+      <div class="info">
+        <div class="row"><div class="label">Business name</div><div id="side-name">Loading...</div></div>
+        <div class="row"><div class="label">Hours</div><div id="side-hours">Loading...</div></div>
+        <div class="row"><div class="label">Address</div><div id="side-address">Loading...</div></div>
+        <div class="row"><div class="label">Phone</div><div id="side-phone">Loading...</div></div>
+      </div>
+      <div class="quick">
+        <button class="secondary" data-q="I want to book a table for 2 on Saturday at 19:00">Book a table</button>
+        <button class="secondary" data-q="What are your opening hours?">Ask opening hours</button>
+        <button class="secondary" data-q="Where are you located?">Ask address</button>
+        <button class="secondary" data-q="Can I call you?">Ask phone</button>
+      </div>
+      <div class="status">
+        <div><strong>Health:</strong> <span id="health">Checking...</span></div>
+        <div><strong>AI:</strong> <span id="ai-status">Not checked yet</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let conversation = [];
+const messages = document.getElementById("messages");
+const input = document.getElementById("input");
+const sendBtn = document.getElementById("send");
+
+function addMessage(role, text){
+  const div = document.createElement("div");
+  div.className = "msg " + (role === "user" ? "user" : "bot");
+  div.textContent = text;
+  messages.appendChild(div);
+  messages.scrollTop = messages.scrollHeight;
+}
+
+async function loadConfig(){
+  const res = await fetch('/api/config');
+  const cfg = await res.json();
+  document.getElementById('biz-name').textContent = cfg.businessName;
+  document.getElementById('chat-title').textContent = cfg.businessName + ' Assistant';
+  document.getElementById('biz-hours').textContent = cfg.businessHours;
+  document.getElementById('biz-address').textContent = cfg.businessAddress;
+  document.getElementById('biz-phone').textContent = cfg.businessPhone;
+  document.getElementById('side-name').textContent = cfg.businessName;
+  document.getElementById('side-hours').textContent = cfg.businessHours;
+  document.getElementById('side-address').textContent = cfg.businessAddress;
+  document.getElementById('side-phone').textContent = cfg.businessPhone;
+}
+
+async function loadHealth(){
+  try {
+    const res = await fetch('/api/health');
+    const data = await res.json();
+    document.getElementById('health').textContent = data.ok ? 'OK' : 'Error';
+  } catch {
+    document.getElementById('health').textContent = 'Error';
+  }
+}
+
+async function loadCalendarStatus(){
+  try {
+    const res = await fetch('/api/calendar-status');
+    const data = await res.json();
+    document.getElementById('calendar-status').innerHTML = data.connected
+      ? '<span class="ok">Google Calendar env vars are present.</span>'
+      : '<span class="warn">Google Calendar is not connected yet.</span>';
+  } catch {
+    document.getElementById('calendar-status').textContent = 'Could not check calendar status.';
+  }
+}
+
+async function sendMessage(){
+  const text = input.value.trim();
+  if(!text) return;
+  input.value = '';
+  addMessage('user', text);
+  conversation.push({ role: 'user', content: text });
+  document.getElementById('ai-status').textContent = 'Thinking...';
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ messages: conversation })
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || 'Request failed');
+    addMessage('assistant', data.reply);
+    conversation.push({ role: 'assistant', content: data.reply });
+    document.getElementById('ai-status').textContent = 'Working';
+  } catch (err) {
+    addMessage('assistant', 'The AI is not working yet. Most likely the ANTHROPIC_API_KEY is missing in Vercel.');
+    document.getElementById('ai-status').textContent = 'Missing key or error';
+  }
+}
+
+sendBtn.addEventListener('click', sendMessage);
+input.addEventListener('keydown', e => { if(e.key === 'Enter') sendMessage(); });
+document.querySelectorAll('[data-q]').forEach(btn => btn.addEventListener('click', () => {
+  input.value = btn.dataset.q;
+  sendMessage();
+}));
+
+loadConfig();
+loadHealth();
+loadCalendarStatus();
+addMessage('assistant', 'Hello. I can help with reservations, opening hours, address, and phone number. How can I help you today?');
+</script>
+</body>
+</html>

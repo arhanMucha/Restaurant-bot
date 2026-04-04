@@ -1,0 +1,10 @@
+{
+  "name": "restaurant-bot-complete",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Vercel-ready restaurant bot with Anthropic backend and simple booking flow",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "googleapis": "^144.0.0"
+  }
+}
